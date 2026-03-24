@@ -1,0 +1,10 @@
+{
+  "name": "cosmic-speed-draw",
+  "private": true,
+  "scripts": {
+    "build": "npm install --prefix app/client && npm run build --prefix app/client && cp -r app/client/dist/. public/"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
