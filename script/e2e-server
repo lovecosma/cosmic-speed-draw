@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${PORT:-3001}"
+export RAILS_ENV="${RAILS_ENV:-test}"
+export RAILS_SERVE_STATIC_FILES="${RAILS_SERVE_STATIC_FILES:-1}"
+
+npm run build
+bundle exec rails db:prepare
+
+exec bin/rails server -p "$PORT"

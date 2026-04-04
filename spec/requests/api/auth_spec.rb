@@ -7,25 +7,25 @@ RSpec.describe "Auth", type: :request do
     end
 
     context "with valid params" do
-      it "returns 201 with user data" do
-        post "/api/users", params: valid_params, as: :json
+      before { post "/api/users", params: valid_params, as: :json }
 
+      it "returns 201" do
         expect(response).to have_http_status(:created)
+      end
+
+      it "returns the user email" do
         expect(json["user"]["email"]).to eq("new@example.com")
+      end
+
+      it "does not return the password" do
         expect(json["user"]).not_to have_key("password")
       end
+    end
 
-      it "returns a JWT in the Authorization header" do
+    it "creates a user" do
+      expect {
         post "/api/users", params: valid_params, as: :json
-
-        expect(response.headers["Authorization"]).to match(/\ABearer .+\z/)
-      end
-
-      it "creates a user" do
-        expect {
-          post "/api/users", params: valid_params, as: :json
-        }.to change(User, :count).by(1)
-      end
+      }.to change(User, :count).by(1)
     end
 
     context "with invalid params" do
@@ -34,6 +34,12 @@ RSpec.describe "Auth", type: :request do
         post "/api/users", params: valid_params, as: :json
 
         expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      it "returns the validation error when email is taken" do
+        create(:user, email: "new@example.com")
+        post "/api/users", params: valid_params, as: :json
+
         expect(json["errors"]).to include("Email has already been taken")
       end
 
@@ -49,17 +55,26 @@ RSpec.describe "Auth", type: :request do
     let!(:user) { create(:user, email: "user@example.com", password: "password123") }
 
     context "with valid credentials" do
-      it "returns 200 with user data" do
-        post "/api/users/sign_in", params: { user: { email: "user@example.com", password: "password123" } }, as: :json
+      before { post "/api/users/sign_in", params: { user: { email: "user@example.com", password: "password123" } }, as: :json }
 
+      it "returns 200" do
         expect(response).to have_http_status(:ok)
+      end
+
+      it "returns the user email" do
         expect(json["user"]["email"]).to eq("user@example.com")
       end
 
-      it "returns a JWT in the Authorization header" do
-        post "/api/users/sign_in", params: { user: { email: "user@example.com", password: "password123" } }, as: :json
+      it "sets the jwt_token cookie" do
+        expect(response.cookies["jwt_token"]).to be_present
+      end
 
-        expect(response.headers["Authorization"]).to match(/\ABearer .+\z/)
+      it "strips the Authorization header from the response" do
+        expect(response.headers["Authorization"]).to be_blank
+      end
+
+      it "sets the jwt_token cookie as HttpOnly" do
+        expect(Array(response.headers["Set-Cookie"])).to include(a_string_including("httponly"))
       end
     end
 
@@ -80,25 +95,35 @@ RSpec.describe "Auth", type: :request do
 
   describe "DELETE /api/users/sign_out" do
     let!(:user) { create(:user) }
-    let(:token) do
+
+    before do
       post "/api/users/sign_in", params: { user: { email: user.email, password: "password123" } }, as: :json
-      response.headers["Authorization"]
     end
 
-    it "returns 200 and signs out" do
-      delete "/api/users/sign_out", headers: { "Authorization" => token }, as: :json
+    context "when signed in" do
+      before { delete "/api/users/sign_out", as: :json }
 
-      expect(response).to have_http_status(:ok)
-      expect(json["message"]).to eq("Signed out successfully")
+      it "returns 200" do
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "returns a signed out message" do
+        expect(json["message"]).to eq("Signed out successfully")
+      end
+
+      it "clears the jwt_token cookie" do
+        expect(Array(response.headers["Set-Cookie"])).to include(a_string_including("jwt_token=;"))
+      end
     end
 
     it "blacklists the JWT so it cannot be reused" do
-      delete "/api/users/sign_out", headers: { "Authorization" => token }, as: :json
-      expect(JwtBlacklist.count).to eq(1)
+      expect {
+        delete "/api/users/sign_out", as: :json
+      }.to change(JwtBlacklist, :count).by(1)
     end
   end
 
   def json
-    JSON.parse(response.body)
+    response.parsed_body
   end
 end

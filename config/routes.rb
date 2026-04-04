@@ -12,6 +12,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     get "/user", to: "users#show"
+    post "/refresh", to: "tokens#create"
   end
 
   get "*path", to: "fallback#index", constraints: ->(req) { !req.xhr? && req.format.html? }

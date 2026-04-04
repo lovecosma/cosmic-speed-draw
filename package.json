@@ -2,9 +2,18 @@
   "name": "cosmic-speed-draw",
   "private": true,
   "scripts": {
-    "build": "npm install --include=dev --prefix app/client && npm run build --prefix app/client && cp -r app/client/dist/. public/"
+    "build": "npm run build --prefix app/client && cp -r app/client/dist/. public/",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:install": "playwright install chromium"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2"
   }
 }
