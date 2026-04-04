@@ -47,8 +47,8 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 
-gem 'devise'
-gem 'devise-jwt'  # JWT tokens for React
-gem 'rspec-rails'
-gem 'factory_bot_rails'
-gem 'dotenv-rails'
+gem "devise"
+gem "devise-jwt"  # JWT tokens for React
+gem "rspec-rails"
+gem "factory_bot_rails"
+gem "dotenv-rails"
