@@ -7,8 +7,8 @@ class Users::SessionsController < Devise::SessionsController
     render json: { user: { id: resource.id, email: resource.email } }
   end
 
-  def respond_to_on_destroy
-    if current_user
+  def respond_to_on_destroy(resource)
+    if resource
       render json: { message: "Signed out successfully" }
     else
       render json: { message: "No active session" }, status: :unauthorized

@@ -1,11 +1,10 @@
 FactoryBot.define do
   factory :drawing do
-    user { nil }
-    title { "MyString" }
-    description { "MyText" }
-    canvas_data { "" }
-    image_url { "MyString" }
-    draft { false }
-    last_autosaved_at { "2026-04-03 22:09:19" }
+    association :user
+    sequence(:title) { |n| "Drawing #{n}" }
+    description { "A test drawing" }
+    canvas_data { { shapes: [] } }
+    image_url { nil }
+    last_autosaved_at { nil }
   end
 end
