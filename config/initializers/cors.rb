@@ -1,9 +1,6 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins(
-      "http://localhost:5173",       # Vite dev server
-      /\Ahttps:\/\/.*\.herokuapp\.com\z/ # Heroku production
-    )
+    origins ENV.fetch("CORS_ORIGIN", "http://localhost:5173")
 
     resource "/api/*",
       headers: :any,
