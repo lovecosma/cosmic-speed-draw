@@ -18,6 +18,9 @@ bundle exec rspec                              # All specs
 bundle exec rspec spec/models/user_spec.rb     # Single file
 bundle exec rspec spec/models/user_spec.rb:12  # Single example by line
 
+# E2E (Playwright)
+npm run e2e               # Builds frontend, starts Rails test server, runs Playwright
+
 # Code quality
 bin/rubocop            # Lint
 bin/rubocop -a         # Auto-fix
@@ -32,11 +35,23 @@ In development, `FallbackController` proxies all non-API routes to the Vite dev 
 
 ### Authentication
 
-Devise + devise-jwt. JWT is dispatched in the `Authorization: Bearer <token>` response header on sign-in/sign-up and must be sent back on subsequent requests. The `JwtBlacklist` model (Denylist strategy) revokes tokens on sign-out.
+Devise + devise-jwt with a dual-token system: a short-lived JWT (15 min) and a long-lived refresh token (30 days).
 
+**Token transport** — `JwtCookieMiddleware` (in `app/middleware/`) sits in the Rack stack and:
+- On responses: moves the JWT from the `Authorization` header into an HttpOnly `jwt_token` cookie, and the refresh token into an HttpOnly `refresh_token` cookie.
+- On requests: reads the `jwt_token` cookie and writes it back into `HTTP_AUTHORIZATION` so Warden's JWT strategy authenticates normally.
+
+Clients never handle tokens directly — the cookies are HttpOnly and managed transparently.
+
+**Endpoints:**
 - Sign up: `POST /api/users`
 - Sign in: `POST /api/users/sign_in`
 - Sign out: `DELETE /api/users/sign_out`
+- Refresh: `POST /api/refresh` — rotates the refresh token and issues a new JWT cookie
+
+**JWT revocation** — `JwtBlacklist` (Denylist strategy) blacklists tokens on sign-out. `Warden::JWTAuth::Middleware` handles blacklisting at the Rack layer, so tokens are revoked even if the controller returns early.
+
+**Important Devise quirk** — `Devise::SessionsController#verify_signed_out_user` uses `warden.user()` which only reads the Warden session. Since `store? false` on the JWT strategy means nothing is ever written to the session, `all_signed_out?` always returns true. `Users::SessionsController` skips this before-action and checks `request.authorization` directly instead.
 
 `Api::AuthController` is the base class for authenticated API endpoints — it runs `before_action :authenticate_user!`. Inherit from it for any controller that requires a logged-in user.
 

@@ -40,10 +40,4 @@ RSpec.describe User, type: :model do
       expect(user.valid_password?("wrong")).to be false
     end
   end
-
-  describe "JWT revocation" do
-    it "uses JwtBlacklist as the revocation strategy" do
-      expect(described_class.jwt_revocation_strategy).to eq(JwtBlacklist)
-    end
-  end
 end

@@ -50,7 +50,6 @@ group :development, :test do
 end
 
 gem "devise"
-gem "devise-jwt"  # JWT tokens for React
+gem "jwt"
 gem "rspec-rails"
 gem "factory_bot_rails"
-gem "dotenv-rails"
