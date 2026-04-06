@@ -34,10 +34,9 @@ RSpec.describe "POST /api/users (registrations)", type: :request do
   end
 
   context "with a provisional session" do
-    let!(:provisional_user) { create(:user, :provisional) }
-    let(:jwt) { JwtService.encode(provisional_user.id) }
-
-    before do
+    let!(:provisional_user) { create(:provisional_user) }
+    let(:jwt) { JwtService.encode_provisional(provisional_user.id) }
+    subject(:sign_up_request) do
       post "/api/users",
         params: valid_params,
         headers: { "Authorization" => "Bearer #{jwt}" },
@@ -45,7 +44,7 @@ RSpec.describe "POST /api/users (registrations)", type: :request do
     end
 
     it "blacklists the provisional JWT" do
-      expect(JwtBlacklist.count).to eq(1)
+      expect { sign_up_request }.to change(JwtBlacklist, :count).by(1)
     end
   end
 end

@@ -1,4 +1,6 @@
 class AuthSessionService
+  include BearerTokenRequest
+
   JWT_COOKIE = "jwt_token"
   REFRESH_COOKIE = RefreshToken::COOKIE_NAME
   COOKIE_OPTIONS = {
@@ -14,8 +16,12 @@ class AuthSessionService
   end
 
   def issue_for(user)
-    set_jwt_cookie(user)
+    set_jwt_cookie(JwtService.encode(user.id))
     set_refresh_cookie(RefreshToken.generate_for(user))
+  end
+
+  def issue_for_provisional(provisional_user)
+    set_jwt_cookie(JwtService.encode_provisional(provisional_user.id))
   end
 
   def rotate_from_refresh_cookie
@@ -29,7 +35,7 @@ class AuthSessionService
   end
 
   def revoke_current_session
-    token = @request.authorization&.delete_prefix("Bearer ")
+    token = bearer_token_from(@request)
     unless token
       clear_cookies
       return false
@@ -50,8 +56,8 @@ class AuthSessionService
     @current_refresh_token = cookie && RefreshToken.find_by(token: cookie)
   end
 
-  def set_jwt_cookie(user)
-    @response.set_cookie(JWT_COOKIE, COOKIE_OPTIONS.merge(value: JwtService.encode(user.id)))
+  def set_jwt_cookie(token)
+    @response.set_cookie(JWT_COOKIE, COOKIE_OPTIONS.merge(value: token))
   end
 
   def set_refresh_cookie(refresh_token)

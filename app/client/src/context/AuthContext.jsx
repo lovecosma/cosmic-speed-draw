@@ -6,16 +6,39 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const refreshingRef = useRef(null);
 
-  // Restore session from cookie on mount
+  // Bootstrap: restore real session → refresh → provisional session.
+  // Always resolves to a user so the app never lands in an unauthenticated state.
   useEffect(() => {
-    fetch("/api/user", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setUser(data?.user ?? null))
-      .finally(() => setLoading(false));
+    async function bootstrap() {
+      const userRes = await fetch("/api/user", { credentials: "include" });
+      if (userRes.ok) {
+        const data = await userRes.json();
+        setUser(data.user);
+        return;
+      }
+
+      const refreshRes = await fetch("/api/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setUser(data.user);
+        return;
+      }
+
+      const provisionalRes = await fetch("/api/provisional_sessions", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await provisionalRes.json();
+      setUser(data.user);
+    }
+
+    bootstrap().finally(() => setLoading(false));
   }, []);
 
   const refresh = useCallback(async () => {
-    // Deduplicate concurrent refresh calls
     if (refreshingRef.current) return refreshingRef.current;
 
     refreshingRef.current = fetch("/api/refresh", {
@@ -75,7 +98,14 @@ export function AuthProvider({ children }) {
       credentials: "include",
     }).catch(() => {});
 
-    setUser(null);
+    // After signing out, start a fresh provisional session so the user
+    // can keep using the app without being forced to log back in.
+    const provisionalRes = await fetch("/api/provisional_sessions", {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await provisionalRes.json();
+    setUser(data.user);
   }, []);
 
   const authFetch = useCallback(
@@ -112,7 +142,8 @@ export function AuthProvider({ children }) {
         signIn,
         signOut,
         authFetch,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !user.provisional,
+        isProvisional: !!user?.provisional,
       }}
     >
       {children}

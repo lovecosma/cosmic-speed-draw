@@ -29,6 +29,20 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "associations" do
+    let(:user) { create(:user) }
+
+    it "destroys drawings when destroyed" do
+      create(:drawing, user: user)
+      expect { user.destroy! }.to change(Drawing, :count).by(-1)
+    end
+
+    it "destroys refresh tokens when destroyed" do
+      RefreshToken.generate_for(user)
+      expect { user.destroy! }.to change(RefreshToken, :count).by(-1)
+    end
+  end
+
   describe "devise modules" do
     it "authenticates with correct password" do
       user.save!

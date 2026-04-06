@@ -1,5 +1,6 @@
 class Api::UsersController < Api::AuthController
   def show
-    render json: { user: { id: current_user.id, email: current_user.email } }
+    u = current_user
+    render json: { user: { id: u.id, email: u.email, provisional: false } }
   end
 end
