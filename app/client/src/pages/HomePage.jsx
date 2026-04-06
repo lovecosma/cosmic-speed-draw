@@ -1,7 +1,7 @@
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from "../context/useAuth";
 
 export default function HomePage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4">
@@ -15,5 +15,5 @@ export default function HomePage() {
         Sign out
       </button>
     </div>
-  )
+  );
 }

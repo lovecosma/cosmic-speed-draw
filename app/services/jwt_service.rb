@@ -14,7 +14,7 @@ class JwtService
 
   # Returns the decoded payload or nil if the token is invalid or blacklisted.
   def self.decode(token)
-    payload, = JWT.decode(token, secret, true, algorithms: [ALGORITHM])
+    payload, = JWT.decode(token, secret, true, algorithms: [ ALGORITHM ])
     return nil if JwtBlacklist.exists?(jti: payload["jti"])
 
     payload
@@ -25,7 +25,7 @@ class JwtService
   # Blacklists the token so it cannot be reused. Verifies the signature but
   # tolerates an already-expired token (e.g. a sign-out after a long idle).
   def self.revoke(token)
-    payload, = JWT.decode(token, secret, true, algorithms: [ALGORITHM], verify_expiration: false)
+    payload, = JWT.decode(token, secret, true, algorithms: [ ALGORITHM ], verify_expiration: false)
     JwtBlacklist.create!(jti: payload["jti"], exp: Time.zone.at(payload["exp"]))
   rescue JWT::DecodeError
     nil

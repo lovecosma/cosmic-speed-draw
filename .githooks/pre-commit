@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+export RAILS_ENV=test
+
+echo "pre-commit: bin/brakeman --no-pager"
+bin/brakeman --no-pager
+
+echo "pre-commit: bin/rubocop -f github"
+bin/rubocop -f github
+
+echo "pre-commit: npm run lint --prefix app/client"
+npm run lint --prefix app/client
+
+echo "pre-commit: npx prettier --check ."
+(cd app/client && npx prettier --check .)
