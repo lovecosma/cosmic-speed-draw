@@ -38,12 +38,14 @@ In development, `FallbackController` proxies all non-API routes to the Vite dev 
 Devise + devise-jwt with a dual-token system: a short-lived JWT (15 min) and a long-lived refresh token (30 days).
 
 **Token transport** — `JwtCookieMiddleware` (in `app/middleware/`) sits in the Rack stack and:
+
 - On responses: moves the JWT from the `Authorization` header into an HttpOnly `jwt_token` cookie, and the refresh token into an HttpOnly `refresh_token` cookie.
 - On requests: reads the `jwt_token` cookie and writes it back into `HTTP_AUTHORIZATION` so Warden's JWT strategy authenticates normally.
 
 Clients never handle tokens directly — the cookies are HttpOnly and managed transparently.
 
 **Endpoints:**
+
 - Sign up: `POST /api/users`
 - Sign in: `POST /api/users/sign_in`
 - Sign out: `DELETE /api/users/sign_out`
@@ -62,18 +64,19 @@ PostgreSQL. All four database connections in production (`primary`, `cache`, `qu
 ### Infrastructure
 
 Rails 8 solid gems for all persistent infrastructure (no Redis):
+
 - **SolidQueue** — background jobs, runs as a separate `worker` dyno on Heroku
 - **SolidCache** — Rails cache store
 - **SolidCable** — Action Cable backend
 
 ### Environment variables
 
-| Variable | Required | Notes |
-|---|---|---|
-| `DATABASE_URL` | Production | Set automatically by Heroku Postgres |
-| `DEVISE_JWT_SECRET_KEY` | All | 128-char hex secret, different per environment |
-| `CORS_ORIGIN` | All | Single origin; defaults to `http://localhost:5173` in dev |
-| `RAILS_MASTER_KEY` | Production | Decrypts `config/credentials.yml.enc` |
+| Variable                | Required   | Notes                                                     |
+| ----------------------- | ---------- | --------------------------------------------------------- |
+| `DATABASE_URL`          | Production | Set automatically by Heroku Postgres                      |
+| `DEVISE_JWT_SECRET_KEY` | All        | 128-char hex secret, different per environment            |
+| `CORS_ORIGIN`           | All        | Single origin; defaults to `http://localhost:5173` in dev |
+| `RAILS_MASTER_KEY`      | Production | Decrypts `config/credentials.yml.enc`                     |
 
 Local dev: copy values into `.env` (loaded by foreman via `bin/dev`). The `.env` file is gitignored.
 

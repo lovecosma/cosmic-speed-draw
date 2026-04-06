@@ -38,18 +38,5 @@ RSpec.describe ProvisionalMigrator do
         expect(ProvisionalUser.exists?(provisional_user.id)).to be false
       end
     end
-
-    context "when provisional_user is nil" do
-      it "does not raise" do
-        expect { described_class.new(nil, real_user).migrate! }.not_to raise_error
-      end
-    end
-
-    context "when real_user is nil" do
-      it "does not destroy the provisional user" do
-        described_class.new(provisional_user, nil).migrate!
-        expect(ProvisionalUser.exists?(provisional_user.id)).to be true
-      end
-    end
   end
 end

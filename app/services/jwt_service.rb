@@ -12,8 +12,14 @@ class JwtService
   end
 
   # Returns the decoded payload (including "type") or nil if invalid/blacklisted.
-  def self.decode(token)
-    payload, = JWT.decode(token, secret, true, algorithms: [ ALGORITHM ])
+  def self.decode(token, verify_expiration: true)
+    payload, = JWT.decode(
+      token,
+      secret,
+      true,
+      algorithms: [ ALGORITHM ],
+      verify_expiration:
+    )
     return nil if JwtBlacklist.exists?(jti: payload["jti"])
 
     payload
