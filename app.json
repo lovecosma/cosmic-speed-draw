@@ -1,7 +1,4 @@
 {
   "name": "cosmic-speed-draw",
-  "buildpacks": [
-    { "url": "heroku/nodejs" },
-    { "url": "heroku/ruby" }
-  ]
+  "buildpacks": [{ "url": "heroku/nodejs" }, { "url": "heroku/ruby" }]
 }

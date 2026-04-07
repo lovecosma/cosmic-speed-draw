@@ -42,26 +42,14 @@ RSpec.describe "GET /api/user", type: :request do
     end
   end
 
-  context "as a provisional user" do
-    let!(:user) { create(:user, :provisional) }
-    let(:jwt) { JwtService.encode(user.id) }
+  context "with a provisional token" do
+    let!(:provisional_user) { create(:provisional_user) }
+    let(:jwt) { JwtService.encode_provisional(provisional_user.id) }
 
     before { get "/api/user", headers: { "Authorization" => "Bearer #{jwt}" }, as: :json }
 
-    it "returns 200" do
-      expect(response).to have_http_status(:ok)
-    end
-
-    it "returns the user id" do
-      expect(response.parsed_body.dig("user", "id")).to eq(user.id)
-    end
-
-    it "returns nil email" do
-      expect(response.parsed_body.dig("user", "email")).to be_nil
-    end
-
-    it "returns provisional: true" do
-      expect(response.parsed_body.dig("user", "provisional")).to be true
+    it "returns 401" do
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 

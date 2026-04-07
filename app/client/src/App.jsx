@@ -5,12 +5,8 @@ import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import HomePage from "./pages/HomePage";
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-  if (loading) return null;
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-}
-
+// Redirects real (non-provisional) users away from guest-only pages.
+// Provisional users can still visit login/signup to upgrade their account.
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return null;
@@ -39,14 +35,7 @@ export default function App() {
               </GuestRoute>
             }
           />
-          <Route
-            path="/home"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/home" element={<HomePage />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </main>

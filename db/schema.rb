@@ -10,12 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_04_043118) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_06_172000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "drawings", force: :cascade do |t|
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
     t.string "title"
     t.text "description"
     t.json "canvas_data"
@@ -23,7 +23,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_043118) do
     t.datetime "last_autosaved_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "provisional_user_id"
+    t.index ["provisional_user_id"], name: "index_drawings_on_provisional_user_id"
     t.index ["user_id"], name: "index_drawings_on_user_id"
+    t.check_constraint "user_id IS NOT NULL AND provisional_user_id IS NULL OR user_id IS NULL AND provisional_user_id IS NOT NULL", name: "drawing_has_one_owner"
   end
 
   create_table "jwt_blacklists", force: :cascade do |t|
@@ -32,6 +35,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_043118) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["jti"], name: "index_jwt_blacklists_on_jti", unique: true
+  end
+
+  create_table "provisional_users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "last_seen_at", null: false
   end
 
   create_table "refresh_tokens", force: :cascade do |t|
@@ -199,7 +208,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_043118) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
-  add_foreign_key "drawings", "users"
+  add_foreign_key "drawings", "provisional_users"
+  add_foreign_key "drawings", "users", on_delete: :cascade
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

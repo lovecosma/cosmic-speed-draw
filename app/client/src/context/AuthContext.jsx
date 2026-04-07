@@ -4,38 +4,53 @@ import { AuthContext } from "./auth-context";
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const refreshingRef = useRef(null);
+  const refreshPromiseRef = useRef(null);
 
-  // Restore session from cookie on mount
-  useEffect(() => {
-    fetch("/api/user", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setUser(data?.user ?? null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const refresh = useCallback(async () => {
-    // Deduplicate concurrent refresh calls
-    if (refreshingRef.current) return refreshingRef.current;
-
-    refreshingRef.current = fetch("/api/refresh", {
+  // Deduplicated refresh: concurrent callers share one in-flight request.
+  const refresh = useCallback(() => {
+    refreshPromiseRef.current ??= fetch("/api/refresh", {
       method: "POST",
       credentials: "include",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Refresh failed");
-        return res.json();
-      })
-      .then((data) => {
-        setUser(data.user);
-        return data.user;
-      })
-      .finally(() => {
-        refreshingRef.current = null;
-      });
-
-    return refreshingRef.current;
+    }).finally(() => {
+      refreshPromiseRef.current = null;
+    });
+    return refreshPromiseRef.current;
   }, []);
+
+  // Bootstrap: restore real session → refresh → provisional session.
+  // Always resolves to a user so the app never lands in an unauthenticated state.
+  useEffect(() => {
+    async function bootstrap() {
+      const userRes = await fetch("/api/user", { credentials: "include" });
+      if (userRes.ok) {
+        const data = await userRes.json();
+        setUser(data.user);
+        return;
+      }
+      // Only attempt refresh/provisional on auth failures. A 5xx or network
+      // blip should not silently replace a real session with a guest one.
+      if (userRes.status !== 401) return;
+
+      const refreshRes = await refresh();
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setUser(data.user);
+        return;
+      }
+      if (refreshRes.status !== 401) return;
+
+      const provisionalRes = await fetch("/api/provisional_sessions", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!provisionalRes.ok)
+        throw new Error("Failed to create provisional session");
+      const data = await provisionalRes.json();
+      setUser(data.user);
+    }
+
+    bootstrap().finally(() => setLoading(false));
+  }, [refresh]);
 
   const signUp = useCallback(async (email, password, passwordConfirmation) => {
     const res = await fetch("/api/users", {
@@ -75,9 +90,21 @@ export function AuthProvider({ children }) {
       credentials: "include",
     }).catch(() => {});
 
-    setUser(null);
+    // After signing out, start a fresh provisional session so the user
+    // can keep using the app without being forced to log back in.
+    const provisionalRes = await fetch("/api/provisional_sessions", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!provisionalRes.ok)
+      throw new Error("Failed to create provisional session");
+    const data = await provisionalRes.json();
+    setUser(data.user);
   }, []);
 
+  // Wraps fetch with automatic JWT refresh on 401. On a successful refresh,
+  // retries the original request once. Falls back to the 401 response if
+  // refresh fails (e.g. for provisional users who have no refresh token).
   const authFetch = useCallback(
     async (url, options = {}) => {
       const opts = {
@@ -87,18 +114,14 @@ export function AuthProvider({ children }) {
       };
 
       const res = await fetch(url, opts);
+      if (res.status !== 401) return res;
 
-      if (res.status === 401) {
-        try {
-          await refresh();
-          return fetch(url, opts);
-        } catch {
-          setUser(null);
-          return res;
-        }
-      }
+      const refreshRes = await refresh();
+      if (!refreshRes.ok) return res;
 
-      return res;
+      const data = await refreshRes.json();
+      setUser(data.user);
+      return fetch(url, opts);
     },
     [refresh],
   );
@@ -112,7 +135,8 @@ export function AuthProvider({ children }) {
         signIn,
         signOut,
         authFetch,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !user.provisional,
+        isProvisional: !!user?.provisional,
       }}
     >
       {children}

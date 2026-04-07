@@ -4,9 +4,9 @@ class Api::AuthController < ApplicationController
   private
 
   def authenticate_user!
-    token = request.authorization&.delete_prefix("Bearer ")
+    token = bearer_token_from(request)
     payload = token && JwtService.decode(token)
-    @current_user = payload && User.find_by(id: payload["sub"])
+    @current_user = payload && payload["type"] == "user" && User.find_by(id: payload["sub"])
     render json: { error: "Unauthorized" }, status: :unauthorized unless @current_user
   end
 

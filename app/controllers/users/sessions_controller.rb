@@ -10,8 +10,9 @@ class Users::SessionsController < Devise::SessionsController
 
   def respond_with(resource, _opts = {})
     if resource&.persisted?
+      migrate_provisional_session!(real_user: resource)
       AuthSessionService.new(request:, response:).issue_for(resource)
-      render json: { user: { id: resource.id, email: resource.email } }
+      render json: { user: { id: resource.id, email: resource.email, provisional: false } }
     else
       render json: { error: "Invalid email or password" }, status: :unauthorized
     end

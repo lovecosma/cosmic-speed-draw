@@ -34,18 +34,35 @@ RSpec.describe "POST /api/users (registrations)", type: :request do
   end
 
   context "with a provisional session" do
-    let!(:provisional_user) { create(:user, :provisional) }
-    let(:jwt) { JwtService.encode(provisional_user.id) }
+    let!(:provisional_user) { create(:provisional_user) }
+    let(:provisional_jwt) { JwtService.encode_provisional(provisional_user.id) }
+    let!(:drawing) { create(:drawing, :provisional, provisional_user: provisional_user) }
 
-    before do
+    subject(:sign_up_request) do
       post "/api/users",
         params: valid_params,
-        headers: { "Authorization" => "Bearer #{jwt}" },
+        headers: { "Cookie" => "jwt_token=#{provisional_jwt}" },
         as: :json
     end
 
     it "blacklists the provisional JWT" do
-      expect(JwtBlacklist.count).to eq(1)
+      sign_up_request
+      expect(JwtService.decode(provisional_jwt)).to be_nil
+    end
+
+    it "reassigns drawings to the new user" do
+      sign_up_request
+      expect(drawing.reload.user_id).to eq(User.last.id)
+    end
+
+    it "clears the provisional_user_id on reassigned drawings" do
+      sign_up_request
+      expect(drawing.reload.provisional_user_id).to be_nil
+    end
+
+    it "destroys the provisional user" do
+      sign_up_request
+      expect(ProvisionalUser.exists?(provisional_user.id)).to be false
     end
   end
 end
