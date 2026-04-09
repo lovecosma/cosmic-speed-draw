@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     post "/provisional_sessions", to: "provisional_sessions#create"
     get  "/user",                 to: "users#show"
     post "/refresh",              to: "tokens#create"
+    resources :drawings, only: [ :index, :create, :show, :update, :destroy ]
   end
 
   get "*path", to: "fallback#index"

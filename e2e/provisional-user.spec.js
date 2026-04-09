@@ -54,17 +54,13 @@ test.describe("provisional session", () => {
   }, testInfo) => {
     const baseURL = testInfo.project.use.baseURL;
 
-    await page.goto("/home");
+    const provisionalResponse = page.waitForResponse((res) =>
+      res.url().includes("/api/provisional_sessions"),
+    );
+    await page.goto("/");
+    await provisionalResponse;
 
-    await expect(page.getByText("You're browsing as a guest.")).toBeVisible();
-    await expect(
-      page
-        .getByRole("main")
-        .getByRole("link", { name: "Sign up to save your work" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("main").getByRole("link", { name: "Sign in" }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
@@ -126,9 +122,13 @@ test.describe("provisional session", () => {
     const baseURL = testInfo.project.use.baseURL;
 
     await addJwtCookie(page, "not.a.valid.token", baseURL);
-    await page.goto("/home");
+    const provisionalResponse = page.waitForResponse((res) =>
+      res.url().includes("/api/provisional_sessions"),
+    );
+    await page.goto("/");
+    await provisionalResponse;
 
-    await expect(page.getByText("You're browsing as a guest.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
@@ -161,8 +161,8 @@ test.describe("provisional user → real user migration on sign up", () => {
     await page.locator("#signup-password-confirmation").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
   test("sign up returns a non-provisional user", async ({ page }, testInfo) => {
@@ -185,7 +185,7 @@ test.describe("provisional user → real user migration on sign up", () => {
     await page.locator("#signup-password-confirmation").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/drawings$/);
     expect(signUpResponseBody.user.provisional).toBe(false);
     expect(signUpResponseBody.user.email).toBe(email);
   });
@@ -206,8 +206,8 @@ test.describe("provisional user → real user migration on sign up", () => {
     await page.locator("#signup-password-confirmation").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
@@ -215,7 +215,7 @@ test.describe("provisional user → real user migration on sign up", () => {
     expect(cookieValue(cookies, "jwt_token")).not.toBe(jwt);
 
     await page.reload();
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const staleRes = await request.get("/api/user", {
       headers: { Cookie: `jwt_token=${jwt}` },
@@ -251,8 +251,8 @@ test.describe("provisional user → real user migration on sign in", () => {
     await page.locator("#login-password").fill("password123");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
   test("sign in returns a non-provisional user", async ({
@@ -288,7 +288,7 @@ test.describe("provisional user → real user migration on sign in", () => {
     await page.locator("#login-password").fill("password123");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/drawings$/);
     expect(signInResponseBody.user.provisional).toBe(false);
     expect(signInResponseBody.user.email).toBe(email);
   });
@@ -319,8 +319,8 @@ test.describe("provisional user → real user migration on sign in", () => {
     await page.locator("#login-password").fill("password123");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
@@ -328,7 +328,7 @@ test.describe("provisional user → real user migration on sign in", () => {
     expect(cookieValue(cookies, "jwt_token")).not.toBe(jwt);
 
     await page.reload();
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const staleRes = await request.get("/api/user", {
       headers: { Cookie: `jwt_token=${jwt}` },
@@ -354,15 +354,15 @@ test.describe("real user sign out after provisional upgrade", () => {
     await page.locator("#signup-password-confirmation").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     await page
       .getByRole("navigation")
       .getByRole("button", { name: "Sign out" })
       .click();
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText("You're browsing as a guest.")).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     const newJwt = cookieValue(cookies, "jwt_token");
