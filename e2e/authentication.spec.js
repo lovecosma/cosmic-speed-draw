@@ -26,14 +26,18 @@ test.describe("authentication", () => {
     await test.step("sign up", async () => {
       await signUp(page, email, password);
 
-      await expect(page).toHaveURL(/\/home$/);
-      await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+      await expect(page).toHaveURL(/\/drawings$/);
+      await expect(
+        page.getByRole("button", { name: "Sign out" }),
+      ).toBeVisible();
     });
 
     await test.step("session restore on reload", async () => {
       await page.reload();
-      await expect(page).toHaveURL(/\/home$/);
-      await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+      await expect(page).toHaveURL(/\/drawings$/);
+      await expect(
+        page.getByRole("button", { name: "Sign out" }),
+      ).toBeVisible();
     });
 
     await test.step("sign out returns to guest state", async () => {
@@ -41,15 +45,17 @@ test.describe("authentication", () => {
         .getByRole("navigation")
         .getByRole("button", { name: "Sign out" })
         .click();
-      await expect(page).toHaveURL(/\/home$/);
-      await expect(page.getByText("You're browsing as a guest.")).toBeVisible();
+      await expect(page).toHaveURL(/\/drawings$/);
+      await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
     });
 
     await test.step("sign back in", async () => {
       await signIn(page, email, password);
 
-      await expect(page).toHaveURL(/\/home$/);
-      await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+      await expect(page).toHaveURL(/\/drawings$/);
+      await expect(
+        page.getByRole("button", { name: "Sign out" }),
+      ).toBeVisible();
     });
   });
 
@@ -61,15 +67,15 @@ test.describe("authentication", () => {
 
     await signUp(page, email);
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
     expect(cookieValue(cookies, "refresh_token")).toBeTruthy();
 
     await page.reload();
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
   test("sign in issues persistent auth cookies and survives reload", async ({
@@ -91,15 +97,15 @@ test.describe("authentication", () => {
 
     await signIn(page, email);
 
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const cookies = await page.context().cookies(baseURL);
     expect(cookieValue(cookies, "jwt_token")).toBeTruthy();
     expect(cookieValue(cookies, "refresh_token")).toBeTruthy();
 
     await page.reload();
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
   test("real users are redirected away from guest-only routes", async ({
@@ -108,15 +114,15 @@ test.describe("authentication", () => {
     const email = `e2e-guest-redirect-${Date.now()}@example.com`;
 
     await signUp(page, email);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     await page.goto("/login");
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     await page.goto("/signup");
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/drawings$/);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
 
   test("sign in shows an error for invalid credentials and leaves the user signed out", async ({
@@ -140,6 +146,52 @@ test.describe("authentication", () => {
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByText("Invalid email or password")).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  });
+
+  test("nav shows signed-in email after sign up", async ({ page }) => {
+    const email = `e2e-nav-email-${Date.now()}@example.com`;
+
+    await signUp(page, email);
+
+    await expect(page.getByRole("navigation")).toContainText(
+      `Signed in as ${email}`,
+    );
+  });
+
+  test("nav shows signed-in email after sign in", async ({ page, request }) => {
+    const email = `e2e-nav-signin-email-${Date.now()}@example.com`;
+
+    await request.post("/api/users", {
+      data: {
+        user: {
+          email,
+          password: "password123",
+          password_confirmation: "password123",
+        },
+      },
+    });
+
+    await signIn(page, email);
+
+    await expect(page.getByRole("navigation")).toContainText(
+      `Signed in as ${email}`,
+    );
+  });
+
+  test("nav does not show signed-in email when signed out", async ({
+    page,
+  }) => {
+    const email = `e2e-nav-signout-${Date.now()}@example.com`;
+
+    await signUp(page, email);
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: "Sign out" })
+      .click();
+
+    await expect(page.getByRole("navigation")).not.toContainText(
+      "Signed in as",
+    );
   });
 
   test("sign up shows validation errors for duplicate email and does not navigate away", async ({
