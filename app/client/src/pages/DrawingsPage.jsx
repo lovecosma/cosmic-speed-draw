@@ -17,14 +17,20 @@ export default function DrawingsPage() {
   const handleNewDrawing = useCallback(async () => {
     if (creating) return;
     setCreating(true);
-    const res = await authFetch("/api/drawings", { method: "POST" });
-    const data = await res.json();
-    addDrawing({
-      id: data.id,
-      preview_url: null,
-      updated_at: new Date().toISOString(),
-    });
-    navigate(`/drawings/${data.id}`);
+    try {
+      const res = await authFetch("/api/drawings", { method: "POST" });
+      const data = await res.json();
+      addDrawing({
+        id: data.id,
+        preview_url: null,
+        updated_at: new Date().toISOString(),
+      });
+      navigate(`/drawings/${data.id}`);
+    } catch {
+      // network or server error — button re-enables via finally
+    } finally {
+      setCreating(false);
+    }
   }, [creating, authFetch, addDrawing, navigate]);
 
   const handleDelete = useCallback(
@@ -76,11 +82,13 @@ export default function DrawingsPage() {
               onClick={() => navigate(`/drawings/${drawing.id}`)}
               className="w-full aspect-square rounded-2xl border border-[var(--border)] overflow-hidden cursor-pointer p-0 bg-white transition duration-150 hover:shadow-[var(--shadow)] hover:-translate-y-0.5"
             >
-              <img
-                src={drawing.preview_url}
-                alt={`Drawing ${drawing.id}`}
-                className="w-full h-full object-cover block"
-              />
+              {drawing.preview_url && (
+                <img
+                  src={drawing.preview_url}
+                  alt={`Drawing ${drawing.id}`}
+                  className="w-full h-full object-cover block"
+                />
+              )}
             </button>
             <button
               onClick={(e) => handleDelete(e, drawing.id)}

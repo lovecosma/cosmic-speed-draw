@@ -1,7 +1,7 @@
 module SessionOwner
   extend ActiveSupport::Concern
+  include BearerTokenRequest
 
-  # Depends on BearerTokenRequest being included by the host controller.
   included do
     before_action :authenticate_session!
   end

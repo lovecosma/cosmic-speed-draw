@@ -192,9 +192,7 @@ export default function DrawingPage() {
         <span
           className={cn(
             "text-xs w-16 text-left",
-            saveStatus === "error"
-              ? "text-[var(--accent)]"
-              : "text-[var(--text)]",
+            saveStatus === "error" ? "text-red-500" : "text-[var(--text)]",
           )}
         >
           {saveStatus === "saving" && "Saving…"}
