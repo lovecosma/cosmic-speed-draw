@@ -116,7 +116,6 @@ export default function DrawingPage() {
     pushRedo();
     ctx.putImageData(snapshot, 0, 0);
     setCanUndo(undoStack.current.length > 0);
-    setCanRedo(redoStack.current.length > 0);
     scheduleAutosave();
   }, [scheduleAutosave, pushRedo]);
 
@@ -136,7 +135,10 @@ export default function DrawingPage() {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
         e.preventDefault();
         handleRedo();
       }
@@ -206,6 +208,10 @@ export default function DrawingPage() {
 
   const handleClear = useCallback(() => {
     pushUndo();
+    if (redoStack.current.length > 0) {
+      redoStack.current = [];
+      setCanRedo(false);
+    }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = CANVAS_BG;
