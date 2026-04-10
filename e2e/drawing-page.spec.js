@@ -50,6 +50,16 @@ test.describe("drawing editor", () => {
     await page.goto(`/drawings/${drawingId}`);
   });
 
+  test("loads without uncaught JavaScript errors", async ({ page }) => {
+    const errors = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+
+    await page.goto(`/drawings/${drawingId}`);
+    await page.locator("canvas").waitFor();
+
+    expect(errors).toHaveLength(0);
+  });
+
   test("shows the canvas", async ({ page }) => {
     await expect(page.locator("canvas")).toBeVisible();
   });

@@ -9,7 +9,7 @@ const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
 const AUTOSAVE_DELAY_MS = 2000;
 const DEFAULT_COLOR = "#000000";
-const CANVAS_BG = CANVAS_BG;
+const CANVAS_BG = "#ffffff";
 
 export default function DrawingPage() {
   const { id } = useParams();
