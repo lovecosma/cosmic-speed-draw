@@ -41,6 +41,7 @@ function waitForInk(page) {
 }
 
 function isCanvasBlank(page) {
+  // Assumes canvas background is white (#ffffff); update if CANVAS_BG changes.
   return page.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const { data } = canvas
@@ -180,10 +181,11 @@ test.describe("drawing editor", () => {
   });
 
   test.describe("undo", () => {
-    test("Undo button is visible and disabled before any strokes", async ({
-      page,
-    }) => {
+    test("Undo button is visible before any strokes", async ({ page }) => {
       await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+    });
+
+    test("Undo button is disabled before any strokes", async ({ page }) => {
       await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
     });
 
@@ -229,6 +231,7 @@ test.describe("drawing editor", () => {
 
       await page.getByRole("button", { name: "Undo" }).click();
 
+      await expect(page.getByText("Saving…")).toBeVisible();
       await expect(page.getByText("Saved")).toBeVisible();
     });
 

@@ -10,6 +10,7 @@ const TOOL_ERASER = "eraser";
 const AUTOSAVE_DELAY_MS = 2000;
 const DEFAULT_COLOR = "#000000";
 const CANVAS_BG = "#ffffff";
+const MAX_UNDO_STACK = 20;
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function DrawingPage() {
   const lastPos = useRef(null);
   const autosaveTimer = useRef(null);
   const undoStack = useRef([]);
+  const hasDrawnInStroke = useRef(false);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [canUndo, setCanUndo] = useState(false);
@@ -83,16 +85,12 @@ export default function DrawingPage() {
     };
   };
 
-  const MAX_UNDO_STACK = 20;
-
   const pushUndo = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    undoStack.current = [
-      ...undoStack.current.slice(-MAX_UNDO_STACK + 1),
-      snapshot,
-    ];
+    undoStack.current.push(snapshot);
+    if (undoStack.current.length > MAX_UNDO_STACK) undoStack.current.shift();
     setCanUndo(true);
   }, []);
 
@@ -100,39 +98,41 @@ export default function DrawingPage() {
     if (undoStack.current.length === 0) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const snapshot = undoStack.current[undoStack.current.length - 1];
-    undoStack.current = undoStack.current.slice(0, -1);
+    const snapshot = undoStack.current.pop();
     ctx.putImageData(snapshot, 0, 0);
     setCanUndo(undoStack.current.length > 0);
     scheduleAutosave();
   }, [scheduleAutosave]);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
     const onKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    canvas.addEventListener("keydown", onKeyDown);
+    return () => canvas.removeEventListener("keydown", onKeyDown);
   }, [handleUndo]);
 
-  const startDrawing = useCallback(
-    (e) => {
-      e.preventDefault();
-      pushUndo();
-      isDrawing.current = true;
-      lastPos.current = getPos(e, canvasRef.current);
-      setSaveStatus(null);
-    },
-    [pushUndo],
-  );
+  const startDrawing = useCallback((e) => {
+    e.preventDefault();
+    canvasRef.current.focus();
+    hasDrawnInStroke.current = false;
+    isDrawing.current = true;
+    lastPos.current = getPos(e, canvasRef.current);
+    setSaveStatus(null);
+  }, []);
 
   const draw = useCallback(
     (e) => {
       e.preventDefault();
       if (!isDrawing.current) return;
+      if (!hasDrawnInStroke.current) {
+        pushUndo();
+        hasDrawnInStroke.current = true;
+      }
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       const pos = getPos(e, canvas);
@@ -156,7 +156,7 @@ export default function DrawingPage() {
 
       lastPos.current = pos;
     },
-    [tool, color],
+    [tool, color, pushUndo],
   );
 
   const stopDrawing = useCallback(() => {
@@ -278,8 +278,9 @@ export default function DrawingPage() {
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
+          tabIndex={0}
           className={cn(
-            "border border-[var(--border)] rounded-lg max-w-full touch-none bg-white",
+            "border border-[var(--border)] rounded-lg max-w-full touch-none bg-white outline-none",
             tool === TOOL_ERASER ? "cursor-cell" : "cursor-crosshair",
           )}
         />
