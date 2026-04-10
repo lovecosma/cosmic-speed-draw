@@ -197,7 +197,9 @@ test.describe("drawing editor", () => {
       await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
     });
 
-    test("undo reverts a stroke, leaving the canvas blank", async ({ page }) => {
+    test("undo reverts a stroke, leaving the canvas blank", async ({
+      page,
+    }) => {
       await drawOnCanvas(page);
       await waitForInk(page);
 
@@ -241,6 +243,81 @@ test.describe("drawing editor", () => {
       await page.getByRole("button", { name: "Undo" }).click();
 
       await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+    });
+  });
+
+  test.describe("redo", () => {
+    test("Redo button is visible before any strokes", async ({ page }) => {
+      await expect(page.getByRole("button", { name: "Redo" })).toBeVisible();
+    });
+
+    test("Redo button is disabled before any strokes", async ({ page }) => {
+      await expect(page.getByRole("button", { name: "Redo" })).toBeDisabled();
+    });
+
+    test("Redo button is disabled after drawing without undoing", async ({
+      page,
+    }) => {
+      await drawOnCanvas(page);
+
+      await expect(page.getByRole("button", { name: "Redo" })).toBeDisabled();
+    });
+
+    test("Redo button becomes enabled after an undo", async ({ page }) => {
+      await drawOnCanvas(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled();
+    });
+
+    test("redo reverts an undo, leaving the canvas non-blank", async ({
+      page,
+    }) => {
+      await drawOnCanvas(page);
+      await waitForInk(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await page.getByRole("button", { name: "Redo" }).click();
+
+      expect(await isCanvasBlank(page)).toBe(false);
+    });
+
+    test("Ctrl+Y redoes the last undo", async ({ page }) => {
+      await drawOnCanvas(page);
+      await waitForInk(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await page.keyboard.press("Control+y");
+
+      expect(await isCanvasBlank(page)).toBe(false);
+    });
+
+    test("redo triggers autosave", async ({ page }) => {
+      await drawOnCanvas(page);
+      await expect(page.getByText("Saved")).toBeVisible();
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await page.getByRole("button", { name: "Redo" }).click();
+
+      await expect(page.getByText("Saved")).toBeVisible();
+    });
+
+    test("Redo button becomes disabled again after redoing all undone strokes", async ({
+      page,
+    }) => {
+      await drawOnCanvas(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+      await page.getByRole("button", { name: "Redo" }).click();
+
+      await expect(page.getByRole("button", { name: "Redo" })).toBeDisabled();
+    });
+
+    test("drawing after an undo clears the redo stack", async ({ page }) => {
+      await drawOnCanvas(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+      await drawOnCanvas(page);
+
+      await expect(page.getByRole("button", { name: "Redo" })).toBeDisabled();
     });
   });
 });
