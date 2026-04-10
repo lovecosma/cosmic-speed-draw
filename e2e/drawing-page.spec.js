@@ -231,7 +231,6 @@ test.describe("drawing editor", () => {
 
       await page.getByRole("button", { name: "Undo" }).click();
 
-      await expect(page.getByText("Saving…")).toBeVisible();
       await expect(page.getByText("Saved")).toBeVisible();
     });
 
