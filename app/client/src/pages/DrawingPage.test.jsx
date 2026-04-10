@@ -31,6 +31,8 @@ function makeCanvasCtx() {
     lineTo: vi.fn(),
     stroke: vi.fn(),
     drawImage: vi.fn(),
+    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(0) })),
+    putImageData: vi.fn(),
     toDataURL: vi.fn(() => "data:image/png;base64,test"),
   };
 }
@@ -101,11 +103,6 @@ describe("DrawingPage — color palette", () => {
     canvasCtx = makeCanvasCtx();
     HTMLCanvasElement.prototype.getContext = vi.fn(() => canvasCtx);
     authFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("renders the color palette", async () => {
