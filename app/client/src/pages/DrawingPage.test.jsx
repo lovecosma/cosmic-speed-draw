@@ -97,10 +97,12 @@ describe("DrawingPage — save status colour", () => {
 
 describe("DrawingPage — color palette", () => {
   let canvasCtx;
+  let authFetch;
 
   beforeEach(() => {
     canvasCtx = makeCanvasCtx();
     HTMLCanvasElement.prototype.getContext = vi.fn(() => canvasCtx);
+    authFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.useFakeTimers();
   });
 
@@ -109,9 +111,6 @@ describe("DrawingPage — color palette", () => {
   });
 
   it("renders the color palette", async () => {
-    const authFetch = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({}) });
     renderPage(authFetch);
     await act(async () => {});
 
@@ -121,9 +120,6 @@ describe("DrawingPage — color palette", () => {
   });
 
   it("switching from eraser to a color activates the pen tool", async () => {
-    const authFetch = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({}) });
     renderPage(authFetch);
     await act(async () => {});
 
@@ -134,9 +130,6 @@ describe("DrawingPage — color palette", () => {
   });
 
   it("uses the selected color as the canvas stroke style", async () => {
-    const authFetch = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({}) });
     renderPage(authFetch);
     await act(async () => {});
 
