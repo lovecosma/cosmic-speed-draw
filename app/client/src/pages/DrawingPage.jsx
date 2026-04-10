@@ -11,6 +11,7 @@ const AUTOSAVE_DELAY_MS = 2000;
 const DEFAULT_COLOR = "#000000";
 const CANVAS_BG = "#ffffff";
 const MAX_UNDO_STACK = 20;
+const MAX_REDO_STACK = 20;
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -22,10 +23,12 @@ export default function DrawingPage() {
   const lastPos = useRef(null);
   const autosaveTimer = useRef(null);
   const undoStack = useRef([]);
+  const redoStack = useRef([]);
   const hasDrawnInStroke = useRef(false);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saving" | "saved" | "error" | null
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -85,12 +88,23 @@ export default function DrawingPage() {
     };
   };
 
+  const pushRedo = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    redoStack.current.push(snapshot);
+    if (redoStack.current.length > MAX_REDO_STACK) redoStack.current.shift();
+    setCanRedo(true);
+  }, []);
+
   const pushUndo = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     undoStack.current.push(snapshot);
-    if (undoStack.current.length > MAX_UNDO_STACK) undoStack.current.shift();
+    if (undoStack.current.length > MAX_UNDO_STACK) {
+      undoStack.current.shift();
+    }
     setCanUndo(true);
   }, []);
 
@@ -99,22 +113,39 @@ export default function DrawingPage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const snapshot = undoStack.current.pop();
+    pushRedo();
     ctx.putImageData(snapshot, 0, 0);
     setCanUndo(undoStack.current.length > 0);
     scheduleAutosave();
-  }, [scheduleAutosave]);
+  }, [scheduleAutosave, pushRedo]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const snapshot = redoStack.current.pop();
+    pushUndo();
+    ctx.putImageData(snapshot, 0, 0);
+    setCanRedo(redoStack.current.length > 0);
+    scheduleAutosave();
+  }, [scheduleAutosave, pushUndo]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
     const onKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        handleRedo();
       }
     };
-    canvas.addEventListener("keydown", onKeyDown);
-    return () => canvas.removeEventListener("keydown", onKeyDown);
-  }, [handleUndo]);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const startDrawing = useCallback((e) => {
     e.preventDefault();
@@ -131,6 +162,10 @@ export default function DrawingPage() {
       if (!isDrawing.current) return;
       if (!hasDrawnInStroke.current) {
         pushUndo();
+        if (redoStack.current.length > 0) {
+          redoStack.current = [];
+          setCanRedo(false);
+        }
         hasDrawnInStroke.current = true;
       }
       const canvas = canvasRef.current;
@@ -173,6 +208,10 @@ export default function DrawingPage() {
 
   const handleClear = useCallback(() => {
     pushUndo();
+    if (redoStack.current.length > 0) {
+      redoStack.current = [];
+      setCanRedo(false);
+    }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = CANVAS_BG;
@@ -215,6 +254,13 @@ export default function DrawingPage() {
           className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Undo
+        </button>
+        <button
+          onClick={handleRedo}
+          disabled={!canRedo}
+          className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Redo
         </button>
         <button
           onClick={handleClear}

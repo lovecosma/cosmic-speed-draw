@@ -4,16 +4,16 @@ A web app for creating and saving drawings. Built with Rails 8 + React 19.
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| API | Rails 8.0, Ruby 3.4 |
-| Frontend | React 19, Vite, Tailwind CSS v4 |
-| Database | PostgreSQL |
-| Auth | Devise + devise-jwt (HttpOnly cookies) |
-| Background jobs | SolidQueue |
-| Cache | SolidCache |
-| WebSockets | SolidCable |
-| Deployment | Heroku |
+| Layer           | Technology                             |
+| --------------- | -------------------------------------- |
+| API             | Rails 8.0, Ruby 3.4                    |
+| Frontend        | React 19, Vite, Tailwind CSS v4        |
+| Database        | PostgreSQL                             |
+| Auth            | Devise + devise-jwt (HttpOnly cookies) |
+| Background jobs | SolidQueue                             |
+| Cache           | SolidCache                             |
+| WebSockets      | SolidCable                             |
+| Deployment      | Heroku                                 |
 
 ## Getting started
 
@@ -44,12 +44,12 @@ The app is at `http://localhost:3000`. The Vite dev server runs on `http://local
 
 ### Environment variables
 
-| Variable | Required | Notes |
-|---|---|---|
-| `DATABASE_URL` | Production | Set automatically by Heroku Postgres |
-| `DEVISE_JWT_SECRET_KEY` | All | 128-char hex secret — generate with `openssl rand -hex 64` |
-| `CORS_ORIGIN` | All | Allowed origin; defaults to `http://localhost:5173` in dev |
-| `RAILS_MASTER_KEY` | Production | Decrypts `config/credentials.yml.enc` |
+| Variable                | Required   | Notes                                                      |
+| ----------------------- | ---------- | ---------------------------------------------------------- |
+| `DATABASE_URL`          | Production | Set automatically by Heroku Postgres                       |
+| `DEVISE_JWT_SECRET_KEY` | All        | 128-char hex secret — generate with `openssl rand -hex 64` |
+| `CORS_ORIGIN`           | All        | Allowed origin; defaults to `http://localhost:5173` in dev |
+| `RAILS_MASTER_KEY`      | Production | Decrypts `config/credentials.yml.enc`                      |
 
 Copy values into `.env` for local development (loaded by foreman via `bin/dev`). The `.env` file is gitignored.
 
