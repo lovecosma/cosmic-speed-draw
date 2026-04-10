@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DrawingsContext } from "../context/drawings-context";
 import { AuthContext } from "../context/auth-context";
@@ -78,10 +78,8 @@ describe("DrawingPage — save status colour", () => {
 
     // Simulate a draw stroke so stopDrawing schedules the autosave
     const canvas = document.querySelector("canvas");
-    canvas.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, clientX: 10, clientY: 10 }),
-    );
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseUp(canvas);
 
     // Advance past the 2 s autosave delay and drain the resulting promises
     await act(async () => {
@@ -136,12 +134,8 @@ describe("DrawingPage — color palette", () => {
     await userEvent.click(screen.getByRole("button", { name: "pick color" }));
 
     const canvas = document.querySelector("canvas");
-    canvas.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, clientX: 10, clientY: 10 }),
-    );
-    canvas.dispatchEvent(
-      new MouseEvent("mousemove", { bubbles: true, clientX: 20, clientY: 20 }),
-    );
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
 
     expect(canvasCtx.strokeStyle).toBe("#ef4444");
   });

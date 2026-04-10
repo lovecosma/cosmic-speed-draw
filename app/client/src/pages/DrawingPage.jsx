@@ -9,6 +9,7 @@ const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
 const AUTOSAVE_DELAY_MS = 2000;
 const DEFAULT_COLOR = "#000000";
+const CANVAS_BG = CANVAS_BG;
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -27,7 +28,7 @@ export default function DrawingPage() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = CANVAS_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     authFetch(`/api/drawings/${id}`)
@@ -100,7 +101,7 @@ export default function DrawingPage() {
       ctx.globalCompositeOperation = "source-over";
 
       if (tool === TOOL_ERASER) {
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle = CANVAS_BG;
         ctx.lineWidth = 24;
       } else {
         ctx.strokeStyle = color;
@@ -132,7 +133,7 @@ export default function DrawingPage() {
   const handleClear = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = CANVAS_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     scheduleAutosave();
   };
