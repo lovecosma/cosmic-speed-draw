@@ -40,6 +40,19 @@ function waitForInk(page) {
   });
 }
 
+function isCanvasBlank(page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector("canvas");
+    const { data } = canvas
+      .getContext("2d")
+      .getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] < 255 || data[i + 1] < 255 || data[i + 2] < 255) return false;
+    }
+    return true;
+  });
+}
+
 test.describe("drawing editor", () => {
   let drawingId;
 
@@ -164,5 +177,68 @@ test.describe("drawing editor", () => {
 
     await expect(page).toHaveURL(/\/drawings$/);
     await expect(page.locator("img")).toHaveCount(0);
+  });
+
+  test.describe("undo", () => {
+    test("Undo button is visible and disabled before any strokes", async ({
+      page,
+    }) => {
+      await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+    });
+
+    test("Undo button becomes enabled after drawing a stroke", async ({
+      page,
+    }) => {
+      await drawOnCanvas(page);
+
+      await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
+    });
+
+    test("undo reverts a stroke, leaving the canvas blank", async ({ page }) => {
+      await drawOnCanvas(page);
+      await waitForInk(page);
+
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      expect(await isCanvasBlank(page)).toBe(true);
+    });
+
+    test("undo after clear restores the drawing", async ({ page }) => {
+      await drawOnCanvas(page);
+      await waitForInk(page);
+      await page.getByRole("button", { name: "Clear" }).click();
+
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      expect(await isCanvasBlank(page)).toBe(false);
+    });
+
+    test("Ctrl+Z undoes the last stroke", async ({ page }) => {
+      await drawOnCanvas(page);
+      await waitForInk(page);
+
+      await page.keyboard.press("Control+z");
+
+      expect(await isCanvasBlank(page)).toBe(true);
+    });
+
+    test("undo triggers autosave", async ({ page }) => {
+      await drawOnCanvas(page);
+      await expect(page.getByText("Saved")).toBeVisible();
+
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await expect(page.getByText("Saved")).toBeVisible();
+    });
+
+    test("Undo button becomes disabled again after undoing all strokes", async ({
+      page,
+    }) => {
+      await drawOnCanvas(page);
+      await page.getByRole("button", { name: "Undo" }).click();
+
+      await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+    });
   });
 });

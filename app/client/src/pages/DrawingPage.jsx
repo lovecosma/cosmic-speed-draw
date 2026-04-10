@@ -20,8 +20,10 @@ export default function DrawingPage() {
   const isDrawing = useRef(false);
   const lastPos = useRef(null);
   const autosaveTimer = useRef(null);
+  const undoStack = useRef([]);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
+  const [canUndo, setCanUndo] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saving" | "saved" | "error" | null
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -81,12 +83,51 @@ export default function DrawingPage() {
     };
   };
 
-  const startDrawing = useCallback((e) => {
-    e.preventDefault();
-    isDrawing.current = true;
-    lastPos.current = getPos(e, canvasRef.current);
-    setSaveStatus(null);
+  const MAX_UNDO_STACK = 20;
+
+  const pushUndo = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    undoStack.current = [
+      ...undoStack.current.slice(-MAX_UNDO_STACK + 1),
+      snapshot,
+    ];
+    setCanUndo(true);
   }, []);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const snapshot = undoStack.current[undoStack.current.length - 1];
+    undoStack.current = undoStack.current.slice(0, -1);
+    ctx.putImageData(snapshot, 0, 0);
+    setCanUndo(undoStack.current.length > 0);
+    scheduleAutosave();
+  }, [scheduleAutosave]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleUndo]);
+
+  const startDrawing = useCallback(
+    (e) => {
+      e.preventDefault();
+      pushUndo();
+      isDrawing.current = true;
+      lastPos.current = getPos(e, canvasRef.current);
+      setSaveStatus(null);
+    },
+    [pushUndo],
+  );
 
   const draw = useCallback(
     (e) => {
@@ -130,13 +171,14 @@ export default function DrawingPage() {
     setTool(TOOL_PEN);
   }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
+    pushUndo();
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = CANVAS_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     scheduleAutosave();
-  };
+  }, [pushUndo, scheduleAutosave]);
 
   return (
     <div className="flex flex-col items-center gap-4 py-6 px-4">
@@ -167,6 +209,13 @@ export default function DrawingPage() {
           className="w-px h-6 bg-gray-300 dark:bg-gray-600"
           aria-hidden="true"
         />
+        <button
+          onClick={handleUndo}
+          disabled={!canUndo}
+          className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Undo
+        </button>
         <button
           onClick={handleClear}
           className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 hover:border-red-400 text-gray-600 hover:text-red-500 dark:text-gray-300 dark:border-gray-600 transition-colors"
