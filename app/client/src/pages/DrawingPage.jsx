@@ -1,9 +1,10 @@
 import cn from "classnames";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useDrawings } from "../context/useDrawings";
 import ColorPalette from "../components/ColorPalette";
+import StrokeWidthPicker from "../components/StrokeWidthPicker";
 
 const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
@@ -12,6 +13,43 @@ const DEFAULT_COLOR = "#000000";
 const CANVAS_BG = "#ffffff";
 const MAX_UNDO_STACK = 20;
 const MAX_REDO_STACK = 20;
+
+function makeEraserCursor(size) {
+  const pad = 4;
+  const dim = size + pad;
+  const center = dim / 2;
+  const hotspot = Math.round(center);
+  const r = size / 2;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${dim}" height="${dim}" viewBox="0 0 ${dim} ${dim}">` +
+    `<circle cx="${center}" cy="${center}" r="${r}" fill="white" stroke="#555" stroke-width="1.5"/>` +
+    `</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hotspot} ${hotspot}, cell`;
+}
+
+// getPos is pure — no component state closed over
+function getPos(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  if (e.touches) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY,
+    };
+  }
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY,
+  };
+}
+
+const PENCIL_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">' +
+  '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" fill="#1a1a1a" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+  "</svg>";
+// Hotspot (2, 18): pencil tip sits at (2, 22) in the 24×24 viewBox, scaled to the 20×20 render size → (2/24*20, 22/24*20) ≈ (2, 18)
+const PEN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(PENCIL_SVG)}") 2 18, crosshair`;
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -27,6 +65,12 @@ export default function DrawingPage() {
   const hasDrawnInStroke = useRef(false);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
+  const [strokeWidth, setStrokeWidth] = useState(3);
+  const [canvasScale, setCanvasScale] = useState(1);
+  const eraserCursor = useMemo(
+    () => makeEraserCursor(Math.round(strokeWidth * canvasScale)),
+    [strokeWidth, canvasScale],
+  );
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saving" | "saved" | "error" | null
@@ -72,21 +116,17 @@ export default function DrawingPage() {
 
   useEffect(() => () => clearTimeout(autosaveTimer.current), []);
 
-  const getPos = (e, canvas) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if (e.touches) {
-      return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
-      };
-    }
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const update = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0) setCanvasScale(rect.width / canvas.width);
     };
-  };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, []);
 
   const pushRedo = useCallback(() => {
     const canvas = canvasRef.current;
@@ -178,11 +218,10 @@ export default function DrawingPage() {
 
       if (tool === TOOL_ERASER) {
         ctx.strokeStyle = CANVAS_BG;
-        ctx.lineWidth = 24;
       } else {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
       }
+      ctx.lineWidth = strokeWidth;
 
       ctx.beginPath();
       ctx.moveTo(lastPos.current.x, lastPos.current.y);
@@ -191,7 +230,7 @@ export default function DrawingPage() {
 
       lastPos.current = pos;
     },
-    [tool, color, pushUndo],
+    [tool, color, strokeWidth, pushUndo],
   );
 
   const stopDrawing = useCallback(() => {
@@ -325,12 +364,18 @@ export default function DrawingPage() {
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           tabIndex={0}
-          className={cn(
-            "border border-[var(--border)] rounded-lg max-w-full touch-none bg-white outline-none",
-            tool === TOOL_ERASER ? "cursor-cell" : "cursor-crosshair",
-          )}
+          className="border border-[var(--border)] rounded-lg max-w-full touch-none bg-white outline-none"
+          style={{
+            cursor: tool === TOOL_ERASER ? eraserCursor : PEN_CURSOR,
+          }}
         />
-        <ColorPalette color={color} onChange={handleColorChange} />
+        <div className="flex flex-col items-center gap-0 w-[200px]">
+          <ColorPalette color={color} onChange={handleColorChange} />
+          <StrokeWidthPicker
+            strokeWidth={strokeWidth}
+            onChange={setStrokeWidth}
+          />
+        </div>
       </div>
     </div>
   );
