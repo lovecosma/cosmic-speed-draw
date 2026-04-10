@@ -5,6 +5,14 @@ import { DrawingsContext } from "../context/drawings-context";
 import { AuthContext } from "../context/auth-context";
 import DrawingPage from "./DrawingPage";
 
+vi.mock("react-color", () => ({
+  SketchPicker: ({ onChangeComplete }) => (
+    <button onClick={() => onChangeComplete({ hex: "#ef4444" })}>
+      pick color
+    </button>
+  ),
+}));
+
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
   useParams: () => ({ id: "42" }),
@@ -109,7 +117,9 @@ describe("DrawingPage — color palette", () => {
     renderPage(authFetch);
     await act(async () => {});
 
-    expect(screen.getByLabelText("#ef4444")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "pick color" }),
+    ).toBeInTheDocument();
   });
 
   it("switching from eraser to a color activates the pen tool", async () => {
@@ -120,7 +130,7 @@ describe("DrawingPage — color palette", () => {
     await act(async () => {});
 
     await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
-    await userEvent.click(screen.getByLabelText("#3b82f6"));
+    await userEvent.click(screen.getByRole("button", { name: "pick color" }));
 
     expect(screen.getByRole("button", { name: "Pen" })).toHaveClass("bg-black");
   });
@@ -132,7 +142,7 @@ describe("DrawingPage — color palette", () => {
     renderPage(authFetch);
     await act(async () => {});
 
-    await userEvent.click(screen.getByLabelText("#ef4444"));
+    await userEvent.click(screen.getByRole("button", { name: "pick color" }));
 
     const canvas = document.querySelector("canvas");
     canvas.dispatchEvent(

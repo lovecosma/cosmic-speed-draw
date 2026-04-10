@@ -1,65 +1,51 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render } from "@testing-library/react";
 import ColorPalette from "./ColorPalette";
 
-const COLORS = [
-  "#000000",
-  "#6b7280",
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#14b8a6",
-  "#3b82f6",
-  "#6366f1",
-  "#a855f7",
-  "#ec4899",
-  "#92400e",
-];
+vi.mock("react-color", () => ({
+  SketchPicker: ({ color, onChangeComplete, disableAlpha }) => (
+    <div
+      data-testid="sketch-picker"
+      data-color={color}
+      data-disable-alpha={String(disableAlpha)}
+    >
+      <button onClick={() => onChangeComplete({ hex: "#ff0000" })}>pick</button>
+    </div>
+  ),
+}));
+
+// Re-import after mock is registered
+const { default: ColorPaletteUnderTest } = await import("./ColorPalette");
 
 function renderPalette(props = {}) {
   return render(
-    <ColorPalette color={COLORS[0]} onChange={vi.fn()} {...props} />,
+    <ColorPaletteUnderTest color="#000000" onChange={vi.fn()} {...props} />,
   );
 }
 
 describe("ColorPalette", () => {
-  it("renders a swatch button for every color", () => {
-    renderPalette();
-    expect(screen.getAllByRole("button")).toHaveLength(COLORS.length);
-  });
-
-  it("calls onChange with the clicked color", async () => {
-    const onChange = vi.fn();
-    renderPalette({ onChange });
-
-    await userEvent.click(screen.getByLabelText("#ef4444"));
-
-    expect(onChange).toHaveBeenCalledWith("#ef4444");
-  });
-
-  it("calls onChange only once per click", async () => {
-    const onChange = vi.fn();
-    renderPalette({ onChange });
-
-    await userEvent.click(screen.getByLabelText("#3b82f6"));
-
-    expect(onChange).toHaveBeenCalledTimes(1);
-  });
-
-  it("marks the active swatch with the accent border class", () => {
-    renderPalette({ color: "#22c55e" });
-
-    expect(screen.getByLabelText("#22c55e")).toHaveClass(
-      "border-[var(--accent)]",
+  it("passes the current color to SketchPicker", () => {
+    const { getByTestId } = renderPalette({ color: "#3b82f6" });
+    expect(getByTestId("sketch-picker")).toHaveAttribute(
+      "data-color",
+      "#3b82f6",
     );
   });
 
-  it("does not mark inactive swatches with the accent border class", () => {
-    renderPalette({ color: "#22c55e" });
+  it("calls onChange with the hex value when a color is picked", async () => {
+    const onChange = vi.fn();
+    const { getByRole } = renderPalette({ onChange });
 
-    const inactive = screen.getByLabelText("#ef4444");
-    expect(inactive).not.toHaveClass("border-[var(--accent)]");
+    getByRole("button", { name: "pick" }).click();
+
+    expect(onChange).toHaveBeenCalledWith("#ff0000");
+  });
+
+  it("disables the alpha channel", () => {
+    const { getByTestId } = renderPalette();
+    expect(getByTestId("sketch-picker")).toHaveAttribute(
+      "data-disable-alpha",
+      "true",
+    );
   });
 });
