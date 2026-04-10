@@ -4,7 +4,7 @@
 
 - **React 19** — functional components and hooks only, no class components
 - **React Router v7** — file-based routing via `<Routes>` / `<Route>` in `App.jsx`
-- **Tailwind CSS v4** — utility classes only; no inline styles, no CSS modules
+- **Tailwind CSS v4** — utility classes only; no inline styles, no CSS modules. Exception: `style={{}}` is permitted for truly dynamic values that have no Tailwind equivalent (e.g. a CSS cursor set to a data-URI SVG).
 - **Context API** — current state solution; no Redux/Zustand unless complexity clearly demands it
 
 ## Context pattern

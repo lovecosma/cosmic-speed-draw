@@ -137,3 +137,120 @@ describe("DrawingPage — color palette", () => {
     expect(canvasCtx.strokeStyle).toBe("#ef4444");
   });
 });
+
+describe("DrawingPage — stroke width", () => {
+  let canvasCtx;
+  let authFetch;
+
+  beforeEach(() => {
+    canvasCtx = makeCanvasCtx();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => canvasCtx);
+    authFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  });
+
+  it("renders the stroke width slider", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    expect(
+      screen.getByRole("slider", { name: "Stroke width" }),
+    ).toBeInTheDocument();
+  });
+
+  it("pen strokes use the current strokeWidth as canvas lineWidth", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    fireEvent.change(screen.getByRole("slider", { name: "Stroke width" }), {
+      target: { value: "15" },
+    });
+
+    const canvas = document.querySelector("canvas");
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+
+    expect(canvasCtx.lineWidth).toBe(15);
+  });
+
+  it("eraser strokes use the current strokeWidth as canvas lineWidth", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    fireEvent.change(screen.getByRole("slider", { name: "Stroke width" }), {
+      target: { value: "18" },
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+
+    const canvas = document.querySelector("canvas");
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+
+    expect(canvasCtx.lineWidth).toBe(18);
+  });
+
+  it("pen tool cursor uses the crosshair fallback", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    const canvas = document.querySelector("canvas");
+    expect(canvas.style.cursor).toContain("crosshair");
+  });
+
+  it("eraser tool cursor uses the cell fallback", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+
+    const canvas = document.querySelector("canvas");
+    expect(canvas.style.cursor).toContain("cell");
+  });
+
+  it("pen and eraser cursors are distinct values", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    const canvas = document.querySelector("canvas");
+    const penCursor = canvas.style.cursor;
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+
+    expect(canvas.style.cursor).not.toBe(penCursor);
+  });
+
+  it("eraser cursor changes when strokeWidth changes", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+
+    const canvas = document.querySelector("canvas");
+    const initialCursor = canvas.style.cursor;
+
+    fireEvent.change(screen.getByRole("slider", { name: "Stroke width" }), {
+      target: { value: "30" },
+    });
+
+    expect(canvas.style.cursor).not.toBe(initialCursor);
+  });
+
+  it("updating strokeWidth is reflected on subsequent strokes", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    const slider = screen.getByRole("slider", { name: "Stroke width" });
+    const canvas = document.querySelector("canvas");
+
+    fireEvent.change(slider, { target: { value: "5" } });
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+    fireEvent.mouseUp(canvas);
+
+    fireEvent.change(slider, { target: { value: "30" } });
+    fireEvent.mouseDown(canvas, { clientX: 30, clientY: 30 });
+    fireEvent.mouseMove(canvas, { clientX: 40, clientY: 40 });
+
+    expect(canvasCtx.lineWidth).toBe(30);
+  });
+});
