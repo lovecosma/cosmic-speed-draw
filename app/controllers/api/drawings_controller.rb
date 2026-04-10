@@ -34,7 +34,7 @@ class Api::DrawingsController < ApplicationController
     return render json: { error: "canvas_data is required" }, status: :unprocessable_entity if canvas_data.blank?
 
     drawing.update!(canvas_data: { data_url: canvas_data }, last_autosaved_at: Time.current)
-    render json: { id: drawing.id }
+    render json: { id: drawing.id, preview_url: drawing.canvas_data["data_url"], updated_at: drawing.updated_at }
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Not found" }, status: :not_found
   end

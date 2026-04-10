@@ -11,7 +11,7 @@ const AUTOSAVE_DELAY_MS = 2000;
 export default function DrawingPage() {
   const { id } = useParams();
   const { authFetch } = useAuth();
-  const { removeDrawing } = useDrawings();
+  const { removeDrawing, updateDrawing } = useDrawings();
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
@@ -44,8 +44,15 @@ export default function DrawingPage() {
     authFetch(`/api/drawings/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ drawing: { canvas_data: dataUrl } }),
-    }).then((res) => setSaveStatus(res.ok ? "saved" : "error"));
-  }, [id, authFetch]);
+    }).then((res) => {
+      if (res.ok) {
+        res.json().then((updated) => updateDrawing(updated));
+        setSaveStatus("saved");
+      } else {
+        setSaveStatus("error");
+      }
+    });
+  }, [id, authFetch, updateDrawing]);
 
   const scheduleAutosave = useCallback(() => {
     clearTimeout(autosaveTimer.current);

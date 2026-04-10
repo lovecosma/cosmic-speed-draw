@@ -211,6 +211,14 @@ RSpec.describe "Api::DrawingsController", type: :request do
         expect(response.parsed_body["id"]).to eq(drawing.id)
       end
 
+      it "returns the preview_url" do
+        expect(response.parsed_body["preview_url"]).to eq(canvas_data_url)
+      end
+
+      it "returns updated_at" do
+        expect(response.parsed_body["updated_at"]).to be_present
+      end
+
       it "stores canvas_data as a data_url hash" do
         expect(drawing.reload.canvas_data).to eq({ "data_url" => canvas_data_url })
       end

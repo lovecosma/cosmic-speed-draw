@@ -20,9 +20,21 @@ export function DrawingsProvider({ children }) {
     setDrawings((prev) => prev?.filter((d) => d.id !== id) ?? prev);
   }, []);
 
+  const updateDrawing = useCallback((drawing) => {
+    setDrawings(
+      (prev) => prev?.map((d) => (d.id === drawing.id ? drawing : d)) ?? prev,
+    );
+  }, []);
+
   return (
     <DrawingsContext.Provider
-      value={{ drawings, fetchDrawings, addDrawing, removeDrawing }}
+      value={{
+        drawings,
+        fetchDrawings,
+        addDrawing,
+        removeDrawing,
+        updateDrawing,
+      }}
     >
       {children}
     </DrawingsContext.Provider>
