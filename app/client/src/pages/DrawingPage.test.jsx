@@ -5,11 +5,9 @@ import { DrawingsContext } from "../context/drawings-context";
 import { AuthContext } from "../context/auth-context";
 import DrawingPage from "./DrawingPage";
 
-vi.mock("react-color", () => ({
-  SketchPicker: ({ onChangeComplete }) => (
-    <button onClick={() => onChangeComplete({ hex: "#ef4444" })}>
-      pick color
-    </button>
+vi.mock("react-colorful", () => ({
+  HexColorPicker: ({ onChange }) => (
+    <button onClick={() => onChange("#ef4444")}>pick color</button>
   ),
 }));
 

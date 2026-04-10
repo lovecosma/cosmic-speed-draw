@@ -2,31 +2,22 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import ColorPalette from "./ColorPalette";
 
-vi.mock("react-color", () => ({
-  SketchPicker: ({ color, onChangeComplete, disableAlpha }) => (
-    <div
-      data-testid="sketch-picker"
-      data-color={color}
-      data-disable-alpha={String(disableAlpha)}
-    >
-      <button onClick={() => onChangeComplete({ hex: "#ff0000" })}>pick</button>
+vi.mock("react-colorful", () => ({
+  HexColorPicker: ({ color, onChange }) => (
+    <div data-testid="hex-color-picker" data-color={color}>
+      <button onClick={() => onChange("#ff0000")}>pick</button>
     </div>
   ),
 }));
 
-// Re-import after mock is registered
-const { default: ColorPaletteUnderTest } = await import("./ColorPalette");
-
 function renderPalette(props = {}) {
-  return render(
-    <ColorPaletteUnderTest color="#000000" onChange={vi.fn()} {...props} />,
-  );
+  return render(<ColorPalette color="#000000" onChange={vi.fn()} {...props} />);
 }
 
 describe("ColorPalette", () => {
-  it("passes the current color to SketchPicker", () => {
+  it("passes the current color to HexColorPicker", () => {
     const { getByTestId } = renderPalette({ color: "#3b82f6" });
-    expect(getByTestId("sketch-picker")).toHaveAttribute(
+    expect(getByTestId("hex-color-picker")).toHaveAttribute(
       "data-color",
       "#3b82f6",
     );
@@ -41,11 +32,12 @@ describe("ColorPalette", () => {
     expect(onChange).toHaveBeenCalledWith("#ff0000");
   });
 
-  it("disables the alpha channel", () => {
-    const { getByTestId } = renderPalette();
-    expect(getByTestId("sketch-picker")).toHaveAttribute(
-      "data-disable-alpha",
-      "true",
-    );
+  it("calls onChange only once per pick", async () => {
+    const onChange = vi.fn();
+    const { getByRole } = renderPalette({ onChange });
+
+    getByRole("button", { name: "pick" }).click();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

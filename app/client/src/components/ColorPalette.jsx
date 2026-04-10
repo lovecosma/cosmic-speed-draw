@@ -1,11 +1,5 @@
-import { SketchPicker } from "react-color";
+import { HexColorPicker } from "react-colorful";
 
 export default function ColorPalette({ color, onChange }) {
-  return (
-    <SketchPicker
-      color={color}
-      onChangeComplete={(c) => onChange(c.hex)}
-      disableAlpha
-    />
-  );
+  return <HexColorPicker color={color} onChange={onChange} />;
 }
