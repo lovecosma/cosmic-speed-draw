@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DrawingsContext } from "../context/drawings-context";
 import { AuthContext } from "../context/auth-context";
 import DrawingPage from "./DrawingPage";
@@ -36,6 +37,7 @@ function renderPage(authFetch) {
       <DrawingsContext.Provider
         value={{
           removeDrawing: vi.fn(),
+          updateDrawing: vi.fn(),
           drawings: [],
           fetchDrawings: vi.fn(),
           addDrawing: vi.fn(),
@@ -84,5 +86,62 @@ describe("DrawingPage — save status colour", () => {
 
     const status = screen.getByText("Save failed");
     expect(status).toHaveClass("text-red-500");
+  });
+});
+
+describe("DrawingPage — color palette", () => {
+  let canvasCtx;
+
+  beforeEach(() => {
+    canvasCtx = makeCanvasCtx();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => canvasCtx);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders the color palette", async () => {
+    const authFetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({}) });
+    renderPage(authFetch);
+    await act(async () => {});
+
+    expect(screen.getByLabelText("#ef4444")).toBeInTheDocument();
+  });
+
+  it("switching from eraser to a color activates the pen tool", async () => {
+    const authFetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({}) });
+    renderPage(authFetch);
+    await act(async () => {});
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+    await userEvent.click(screen.getByLabelText("#3b82f6"));
+
+    expect(screen.getByRole("button", { name: "Pen" })).toHaveClass("bg-black");
+  });
+
+  it("uses the selected color as the canvas stroke style", async () => {
+    const authFetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({}) });
+    renderPage(authFetch);
+    await act(async () => {});
+
+    await userEvent.click(screen.getByLabelText("#ef4444"));
+
+    const canvas = document.querySelector("canvas");
+    canvas.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true, clientX: 10, clientY: 10 }),
+    );
+    canvas.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true, clientX: 20, clientY: 20 }),
+    );
+
+    expect(canvasCtx.strokeStyle).toBe("#ef4444");
   });
 });

@@ -3,10 +3,12 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useDrawings } from "../context/useDrawings";
+import ColorPalette from "../components/ColorPalette";
 
 const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
 const AUTOSAVE_DELAY_MS = 2000;
+const DEFAULT_COLOR = "#000000";
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -18,6 +20,7 @@ export default function DrawingPage() {
   const lastPos = useRef(null);
   const autosaveTimer = useRef(null);
   const [tool, setTool] = useState(TOOL_PEN);
+  const [color, setColor] = useState(DEFAULT_COLOR);
   const [saveStatus, setSaveStatus] = useState(null); // "saving" | "saved" | "error" | null
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -100,7 +103,7 @@ export default function DrawingPage() {
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 24;
       } else {
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = color;
         ctx.lineWidth = 3;
       }
 
@@ -111,7 +114,7 @@ export default function DrawingPage() {
 
       lastPos.current = pos;
     },
-    [tool],
+    [tool, color],
   );
 
   const stopDrawing = useCallback(() => {
@@ -120,6 +123,11 @@ export default function DrawingPage() {
     lastPos.current = null;
     scheduleAutosave();
   }, [scheduleAutosave]);
+
+  const handleColorChange = useCallback((c) => {
+    setColor(c);
+    setTool(TOOL_PEN);
+  }, []);
 
   const handleClear = () => {
     const canvas = canvasRef.current;
@@ -208,22 +216,25 @@ export default function DrawingPage() {
         </span>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        width={900}
-        height={600}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={stopDrawing}
-        className={cn(
-          "border border-[var(--border)] rounded-lg max-w-full touch-none bg-white",
-          tool === TOOL_ERASER ? "cursor-cell" : "cursor-crosshair",
-        )}
-      />
+      <div className="flex items-start gap-3">
+        <canvas
+          ref={canvasRef}
+          width={900}
+          height={600}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+          className={cn(
+            "border border-[var(--border)] rounded-lg max-w-full touch-none bg-white",
+            tool === TOOL_ERASER ? "cursor-cell" : "cursor-crosshair",
+          )}
+        />
+        <ColorPalette color={color} onChange={handleColorChange} />
+      </div>
     </div>
   );
 }
