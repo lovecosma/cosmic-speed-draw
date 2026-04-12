@@ -5,6 +5,7 @@ import { useAuth } from "../context/useAuth";
 import { useDrawings } from "../context/useDrawings";
 import ColorPalette from "../components/ColorPalette";
 import StrokeWidthPicker from "../components/StrokeWidthPicker";
+import OpacityPicker from "../components/OpacityPicker";
 
 const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
@@ -58,14 +59,16 @@ export default function DrawingPage() {
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
-  const lastPos = useRef(null);
   const autosaveTimer = useRef(null);
   const undoStack = useRef([]);
   const redoStack = useRef([]);
+  const strokePoints = useRef([]);
+  const strokeStartSnapshot = useRef(null);
   const hasDrawnInStroke = useRef(false);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [strokeWidth, setStrokeWidth] = useState(3);
+  const [opacity, setOpacity] = useState(100);
   const [canvasScale, setCanvasScale] = useState(1);
   const eraserCursor = useMemo(
     () => makeEraserCursor(Math.round(strokeWidth * canvasScale)),
@@ -190,9 +193,17 @@ export default function DrawingPage() {
   const startDrawing = useCallback((e) => {
     e.preventDefault();
     canvasRef.current.focus();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    strokeStartSnapshot.current = ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+    strokePoints.current = [getPos(e, canvas)];
     hasDrawnInStroke.current = false;
     isDrawing.current = true;
-    lastPos.current = getPos(e, canvasRef.current);
     setSaveStatus(null);
   }, []);
 
@@ -211,32 +222,39 @@ export default function DrawingPage() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       const pos = getPos(e, canvas);
+      strokePoints.current.push(pos);
+
+      ctx.putImageData(strokeStartSnapshot.current, 0, 0);
 
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.globalCompositeOperation = "source-over";
 
       if (tool === TOOL_ERASER) {
+        ctx.globalAlpha = 1;
         ctx.strokeStyle = CANVAS_BG;
       } else {
+        ctx.globalAlpha = opacity / 100;
         ctx.strokeStyle = color;
       }
       ctx.lineWidth = strokeWidth;
 
+      const pts = strokePoints.current;
       ctx.beginPath();
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-      ctx.lineTo(pos.x, pos.y);
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+      }
       ctx.stroke();
-
-      lastPos.current = pos;
     },
-    [tool, color, strokeWidth, pushUndo],
+    [tool, color, strokeWidth, opacity, pushUndo],
   );
 
   const stopDrawing = useCallback(() => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
-    lastPos.current = null;
+    strokePoints.current = [];
+    strokeStartSnapshot.current = null;
     scheduleAutosave();
   }, [scheduleAutosave]);
 
@@ -253,6 +271,7 @@ export default function DrawingPage() {
     }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+    ctx.globalAlpha = 1;
     ctx.fillStyle = CANVAS_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     scheduleAutosave();
@@ -374,6 +393,11 @@ export default function DrawingPage() {
           <StrokeWidthPicker
             strokeWidth={strokeWidth}
             onChange={setStrokeWidth}
+          />
+          <OpacityPicker
+            opacity={opacity}
+            onChange={setOpacity}
+            color={color}
           />
         </div>
       </div>

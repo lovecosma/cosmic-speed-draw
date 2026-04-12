@@ -138,6 +138,67 @@ describe("DrawingPage — color palette", () => {
   });
 });
 
+describe("DrawingPage — opacity", () => {
+  let canvasCtx;
+  let authFetch;
+
+  beforeEach(() => {
+    canvasCtx = makeCanvasCtx();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => canvasCtx);
+    authFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  });
+
+  it("renders the opacity slider", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    expect(screen.getByRole("slider", { name: "Opacity" })).toBeInTheDocument();
+  });
+
+  it("pen strokes apply the current opacity as canvas globalAlpha", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    fireEvent.change(screen.getByRole("slider", { name: "Opacity" }), {
+      target: { value: "50" },
+    });
+
+    const canvas = document.querySelector("canvas");
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+
+    expect(canvasCtx.globalAlpha).toBe(0.5);
+  });
+
+  it("eraser strokes always use globalAlpha of 1 regardless of opacity setting", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    fireEvent.change(screen.getByRole("slider", { name: "Opacity" }), {
+      target: { value: "30" },
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Eraser" }));
+
+    const canvas = document.querySelector("canvas");
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+
+    expect(canvasCtx.globalAlpha).toBe(1);
+  });
+
+  it("restores the pre-stroke snapshot on each mousemove", async () => {
+    renderPage(authFetch);
+    await act(async () => {});
+
+    const canvas = document.querySelector("canvas");
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(canvas, { clientX: 20, clientY: 20 });
+
+    expect(canvasCtx.putImageData).toHaveBeenCalled();
+  });
+});
+
 describe("DrawingPage — stroke width", () => {
   let canvasCtx;
   let authFetch;
