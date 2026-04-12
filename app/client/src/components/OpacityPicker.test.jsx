@@ -22,6 +22,13 @@ describe("OpacityPicker", () => {
     expect(screen.getByTestId("opacity-preview")).toHaveStyle({ opacity: 0.4 });
   });
 
+  it("sets the preview dot background color to the current color", () => {
+    renderPicker({ color: "#ef4444" });
+    expect(screen.getByTestId("opacity-preview")).toHaveStyle({
+      backgroundColor: "#ef4444",
+    });
+  });
+
   it("slider minimum is 1", () => {
     renderPicker();
     expect(screen.getByRole("slider", { name: "Opacity" })).toHaveAttribute(

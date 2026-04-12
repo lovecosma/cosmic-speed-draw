@@ -1,11 +1,16 @@
-export default function OpacityPicker({ opacity, onChange }) {
+export default function OpacityPicker({ opacity, onChange, color }) {
   return (
     <div className="flex flex-col items-center gap-2 w-full pt-2">
       <div className="flex items-center justify-center w-full h-14 bg-white dark:bg-gray-900 border border-[var(--border)] rounded-lg">
         <div
           data-testid="opacity-preview"
-          className="rounded-full bg-black dark:bg-white"
-          style={{ width: 20, height: 20, opacity: opacity / 100 }}
+          className="rounded-full"
+          style={{
+            width: 20,
+            height: 20,
+            opacity: opacity / 100,
+            backgroundColor: color,
+          }}
         />
       </div>
       <input

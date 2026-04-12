@@ -64,6 +64,7 @@ export default function DrawingPage() {
   const redoStack = useRef([]);
   const strokePoints = useRef([]);
   const strokeStartSnapshot = useRef(null);
+  const hasDrawnInStroke = useRef(false);
   const [tool, setTool] = useState(TOOL_PEN);
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [strokeWidth, setStrokeWidth] = useState(3);
@@ -189,34 +190,35 @@ export default function DrawingPage() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const startDrawing = useCallback(
-    (e) => {
-      e.preventDefault();
-      canvasRef.current.focus();
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      pushUndo();
-      if (redoStack.current.length > 0) {
-        redoStack.current = [];
-        setCanRedo(false);
-      }
-      strokeStartSnapshot.current = ctx.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      );
-      strokePoints.current = [getPos(e, canvas)];
-      isDrawing.current = true;
-      setSaveStatus(null);
-    },
-    [pushUndo],
-  );
+  const startDrawing = useCallback((e) => {
+    e.preventDefault();
+    canvasRef.current.focus();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    strokeStartSnapshot.current = ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+    strokePoints.current = [getPos(e, canvas)];
+    hasDrawnInStroke.current = false;
+    isDrawing.current = true;
+    setSaveStatus(null);
+  }, []);
 
   const draw = useCallback(
     (e) => {
       e.preventDefault();
       if (!isDrawing.current) return;
+      if (!hasDrawnInStroke.current) {
+        pushUndo();
+        if (redoStack.current.length > 0) {
+          redoStack.current = [];
+          setCanRedo(false);
+        }
+        hasDrawnInStroke.current = true;
+      }
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       const pos = getPos(e, canvas);
@@ -244,9 +246,8 @@ export default function DrawingPage() {
         ctx.lineTo(pts[i].x, pts[i].y);
       }
       ctx.stroke();
-      ctx.globalAlpha = 1;
     },
-    [tool, color, strokeWidth, opacity],
+    [tool, color, strokeWidth, opacity, pushUndo],
   );
 
   const stopDrawing = useCallback(() => {
@@ -270,6 +271,7 @@ export default function DrawingPage() {
     }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+    ctx.globalAlpha = 1;
     ctx.fillStyle = CANVAS_BG;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     scheduleAutosave();
@@ -392,7 +394,11 @@ export default function DrawingPage() {
             strokeWidth={strokeWidth}
             onChange={setStrokeWidth}
           />
-          <OpacityPicker opacity={opacity} onChange={setOpacity} />
+          <OpacityPicker
+            opacity={opacity}
+            onChange={setOpacity}
+            color={color}
+          />
         </div>
       </div>
     </div>
