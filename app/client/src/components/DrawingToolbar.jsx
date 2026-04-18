@@ -3,6 +3,8 @@ import ColorPalette from "./ColorPalette";
 import StrokeWidthPicker from "./StrokeWidthPicker";
 import OpacityPicker from "./OpacityPicker";
 
+export const LG_BREAKPOINT = 1024;
+
 export default function DrawingToolbar({
   color,
   onColorChange,
@@ -11,7 +13,6 @@ export default function DrawingToolbar({
   opacity,
   onOpacityChange,
 }) {
-  const LG_BREAKPOINT = 1024;
   const [isOpen, setIsOpen] = useState(
     () => window.innerWidth >= LG_BREAKPOINT,
   );
@@ -23,20 +24,21 @@ export default function DrawingToolbar({
         {isOpen ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] shadow-lg w-[216px] flex flex-col overflow-hidden">
             {/* Title bar */}
-            <div
+            <button
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)] select-none cursor-pointer"
+              aria-label="Collapse toolbar"
+              className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)] select-none cursor-pointer w-full"
             >
               <span className="text-xs font-medium text-[var(--text)]">
                 Tools
               </span>
               <span
-                aria-label="Collapse toolbar"
+                aria-hidden="true"
                 className="text-[var(--text)] hover:text-[var(--text-h)] leading-none text-base"
               >
                 ✕
               </span>
-            </div>
+            </button>
 
             {/* Pickers */}
             <div className="flex flex-col items-center px-5 py-8 gap-6">

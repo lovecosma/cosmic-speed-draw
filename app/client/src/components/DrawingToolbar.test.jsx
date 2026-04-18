@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import DrawingToolbar from "./DrawingToolbar";
-
-const LG_BREAKPOINT = 1024;
+import DrawingToolbar, { LG_BREAKPOINT } from "./DrawingToolbar";
 
 function setViewportWidth(width) {
   Object.defineProperty(window, "innerWidth", {
