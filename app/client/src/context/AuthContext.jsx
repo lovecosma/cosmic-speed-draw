@@ -90,8 +90,6 @@ export function AuthProvider({ children }) {
       credentials: "include",
     }).catch(() => {});
 
-    // After signing out, start a fresh provisional session so the user
-    // can keep using the app without being forced to log back in.
     const provisionalRes = await fetch("/api/provisional_sessions", {
       method: "POST",
       credentials: "include",
@@ -102,9 +100,6 @@ export function AuthProvider({ children }) {
     setUser(data.user);
   }, []);
 
-  // Wraps fetch with automatic JWT refresh on 401. On a successful refresh,
-  // retries the original request once. Falls back to the 401 response if
-  // refresh fails (e.g. for provisional users who have no refresh token).
   const authFetch = useCallback(
     async (url, options = {}) => {
       const opts = {

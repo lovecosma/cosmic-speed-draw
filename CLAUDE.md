@@ -84,6 +84,10 @@ Local dev: copy values into `.env` (loaded by foreman via `bin/dev`). The `.env`
 
 RSpec with FactoryBot. Tests hit a real PostgreSQL database — no DB mocking. GitHub Actions CI runs `scan_ruby` (brakeman), `lint` (rubocop), and `test` (rspec) in parallel. The `DEVISE_JWT_SECRET_KEY` secret must be set in GitHub repository secrets.
 
+### Frontend code style
+
+- Always use the `classnames` library (`cn(...)`) for constructing class strings in React components. Prefer it over template literals or string concatenation for all conditional and composed class names.
+
 ### Deployment
 
 Heroku with Node.js + Ruby buildpacks (in that order). The Node.js buildpack builds the Vite frontend (`npm run build` at root, which installs client deps with `--include=dev` and copies `app/client/dist/` → `public/`). The `release` dyno runs `bin/rails db:prepare`.

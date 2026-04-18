@@ -19,7 +19,7 @@ export default function OpacityPicker({ opacity, onChange, color }) {
         max={100}
         value={opacity}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-black dark:accent-white"
+        className="w-full"
         aria-label="Opacity"
       />
       <span className="text-xs text-gray-500 dark:text-gray-400">

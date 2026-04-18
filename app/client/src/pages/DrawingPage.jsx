@@ -3,9 +3,8 @@ import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useDrawings } from "../context/useDrawings";
-import ColorPalette from "../components/ColorPalette";
-import StrokeWidthPicker from "../components/StrokeWidthPicker";
-import OpacityPicker from "../components/OpacityPicker";
+import DrawingToolbar from "../components/DrawingToolbar";
+import pencilSvgUrl from "../assets/svg/pencil.svg?url";
 
 const TOOL_PEN = "pen";
 const TOOL_ERASER = "eraser";
@@ -28,7 +27,6 @@ function makeEraserCursor(size) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hotspot} ${hotspot}, cell`;
 }
 
-// getPos is pure — no component state closed over
 function getPos(e, canvas) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -45,12 +43,8 @@ function getPos(e, canvas) {
   };
 }
 
-const PENCIL_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">' +
-  '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" fill="#1a1a1a" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-  "</svg>";
 // Hotspot (2, 18): pencil tip sits at (2, 22) in the 24×24 viewBox, scaled to the 20×20 render size → (2/24*20, 22/24*20) ≈ (2, 18)
-const PEN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(PENCIL_SVG)}") 2 18, crosshair`;
+const PEN_CURSOR = `url("${pencilSvgUrl}") 2 18, crosshair`;
 
 export default function DrawingPage() {
   const { id } = useParams();
@@ -277,8 +271,14 @@ export default function DrawingPage() {
     scheduleAutosave();
   }, [pushUndo, scheduleAutosave]);
 
+  const handleDelete = useCallback(async () => {
+    await authFetch(`/api/drawings/${id}`, { method: "DELETE" });
+    removeDrawing(Number(id));
+    navigate("/drawings");
+  }, [authFetch, id, removeDrawing, navigate]);
+
   return (
-    <div className="flex flex-col items-center gap-4 py-6 px-4">
+    <div className="flex flex-col items-center gap-4 py-6 px-4 pb-16 lg:pb-6 h-[calc(100svh-3.5rem)] md:h-auto overflow-hidden md:overflow-visible">
       <h1 className="text-[28px] mt-0 mb-1">Draw</h1>
 
       <div className="flex items-center gap-3">
@@ -333,11 +333,7 @@ export default function DrawingPage() {
               Delete?
             </span>
             <button
-              onClick={async () => {
-                await authFetch(`/api/drawings/${id}`, { method: "DELETE" });
-                removeDrawing(Number(id));
-                navigate("/drawings");
-              }}
+              onClick={handleDelete}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors"
             >
               Yes, delete
@@ -370,7 +366,7 @@ export default function DrawingPage() {
         </span>
       </div>
 
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 flex-1 min-h-0 w-full justify-center md:flex-none md:w-auto">
         <canvas
           ref={canvasRef}
           width={900}
@@ -383,23 +379,19 @@ export default function DrawingPage() {
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           tabIndex={0}
-          className="border border-[var(--border)] rounded-lg max-w-full touch-none bg-white outline-none"
+          className="border border-[var(--border)] rounded-lg max-w-full touch-none bg-white outline-none h-full md:h-auto w-full md:w-auto"
           style={{
             cursor: tool === TOOL_ERASER ? eraserCursor : PEN_CURSOR,
           }}
         />
-        <div className="flex flex-col items-center gap-0 w-[200px]">
-          <ColorPalette color={color} onChange={handleColorChange} />
-          <StrokeWidthPicker
-            strokeWidth={strokeWidth}
-            onChange={setStrokeWidth}
-          />
-          <OpacityPicker
-            opacity={opacity}
-            onChange={setOpacity}
-            color={color}
-          />
-        </div>
+        <DrawingToolbar
+          color={color}
+          onColorChange={handleColorChange}
+          strokeWidth={strokeWidth}
+          onStrokeWidthChange={setStrokeWidth}
+          opacity={opacity}
+          onOpacityChange={setOpacity}
+        />
       </div>
     </div>
   );
